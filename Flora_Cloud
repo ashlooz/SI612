@@ -1,0 +1,103 @@
+/* 
+ * Project myProject
+ * Author: Your Name
+ * Date: 
+ * For comprehensive documentation and examples, please visit:
+ * https://docs.particle.io/firmware/best-practices/firmware-template/
+ */
+
+// Include Particle Device OS APIs
+#include "Particle.h"
+
+#include "../lib/neopixel/src/neopixel.h"
+
+#define PIXEL_PIN SPI1
+#define PIXEL_COUNT 12
+#define PIXEL_TYPE WS2812
+
+int setNPColor(String colorName);
+int setNPBrightness(String level); // new: function to adjust brightness
+
+// Let Device OS manage the connection to the Particle Cloud
+SYSTEM_MODE(AUTOMATIC);
+
+// Run the application and system concurrently in separate threads
+SYSTEM_THREAD(ENABLED);
+
+// Show system, cloud connectivity, and application logs over USB
+// View logs with CLI using 'particle serial monitor --follow'
+SerialLogHandler logHandler(LOG_LEVEL_INFO);
+
+Adafruit_NeoPixel ring(PIXEL_COUNT, PIXEL_PIN, PIXEL_TYPE);
+
+// Global brightness variable (range: 0–255)
+uint8_t currentBrightness = 80;
+
+// setup() runs once, when the device is first turned on
+void setup() {
+  ring.begin();
+
+  Particle.function("colorName", setNPColor);
+  Particle.function("setBrightness", setNPBrightness); // new: register brightness function
+
+  // Put initialization like pinMode and begin functions here
+}
+
+// loop() runs over and over again, as quickly as it can execute.
+void loop() {
+  // The core of your code will likely live here.
+
+  // Example: Publish event to cloud every 10 seconds. Uncomment the next 3 lines to try it!
+  // Log.info("Sending Hello World to the cloud!");
+  // Particle.publish("Hello world!");
+  // delay( 10 * 1000 ); // milliseconds and blocking - see docs for more info!
+}
+
+int setNPColor(String colorName) {
+
+  // unassigned (not pos/neg) number 
+  uint8_t red = 0;
+  uint8_t green = 0;
+  uint8_t blue = 0;
+
+  if (colorName == "spring") { // neutral white
+    red = 255; green = 255; blue = 255;
+  } else if (colorName == "summer") { // bright yellow hue
+    red = 255; green = 120; blue = 30;
+  } else if (colorName == "fall") { // warm soft white
+    red = 255; green = 150; blue = 80;
+  } else if (colorName == "winter") { // cool blue hue
+    red = 100; green = 180; blue = 255;
+  } else if (colorName == "yellow") {
+    red = 255; green = 255; blue = 0;
+  } else if (colorName == "blue") {
+    red = 0; green = 0; blue = 255;
+  } else if (colorName == "pink") {
+    red = 255; green = 105; blue = 180;
+  } else {
+    red = 0; green = 0; blue = 0; // default aka off
+  }
+
+  // Apply current brightness and set pixel color
+  ring.setBrightness(currentBrightness); // use dynamic brightness
+  for(int i = 0; i < ring.numPixels(); i++) {
+    ring.setPixelColor(i, red, green, blue);
+  }
+
+  ring.show(); // show updated color
+  return 0;
+}
+
+// Function to set brightness dynamically via cloud call
+int setNPBrightness(String level) {
+  int brightness = level.toInt(); // convert string to int
+  if (brightness < 0 || brightness > 255) {
+    return -1; // invalid input
+  }
+
+  currentBrightness = brightness;
+  ring.setBrightness(currentBrightness);
+  ring.show(); // apply new brightness to current color
+
+  return 1; // success
+}
